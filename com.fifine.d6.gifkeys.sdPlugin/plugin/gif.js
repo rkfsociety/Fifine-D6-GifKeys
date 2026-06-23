@@ -59,7 +59,7 @@ function stopGifPlayer(context) {
 function logGif(context, message) {
     window.socket?.send(JSON.stringify({
         event: "logMessage",
-        payload: { message: "[Fifine D6 Starter] " + message + " (" + context + ")" }
+        payload: { message: "[D6 GIF Keys] " + message + " (" + context + ")" }
     }));
 }
 
