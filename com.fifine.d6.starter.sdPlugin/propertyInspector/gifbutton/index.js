@@ -56,6 +56,7 @@ function updatePreview() {
 function syncFields() {
     $("#gifUrl").value = $settings.gifUrl || "";
     $("#fps").value = $settings.fps ?? 15;
+    $("#bgOpacity").value = $settings.bgOpacity ?? 50;
     $("#title").value = $settings.title || "";
     updatePreview();
 }
@@ -96,6 +97,10 @@ $("#gifUrl").on("change", () => {
 
 $("#fps").on("change", () => {
     $settings.fps = Math.min(30, Math.max(1, Number($("#fps").value) || 15));
+});
+
+$("#bgOpacity").on("change", () => {
+    $settings.bgOpacity = Math.min(100, Math.max(0, Number($("#bgOpacity").value) || 50));
 });
 
 $("#title").on("change", () => {

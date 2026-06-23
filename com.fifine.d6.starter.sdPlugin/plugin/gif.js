@@ -2,6 +2,7 @@
 const D6_KEY_SIZE = 126;
 
 const gifPlayers = {};
+let bgImageCache = null;
 
 function toFileUrl(path) {
     if (!path || path.startsWith("data:") || path.startsWith("http")) return path;
@@ -10,72 +11,49 @@ function toFileUrl(path) {
     return "file:///" + (normalized.startsWith("/") ? normalized.slice(1) : normalized);
 }
 
-function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-function loadPluginStatic(relativePath) {
-    const url = new URL(relativePath, new URL("../", window.location.href)).href;
-    return fetch(url)
-        .then((response) => {
-            if (!response.ok) throw new Error("static fetch failed: " + relativePath);
-            return response.blob();
-        })
-        .then(blobToDataUrl);
-}
-
-function loadLocalFile(path) {
+function loadArrayBufferFromUrl(url) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("GET", toFileUrl(path), true);
-        xhr.responseType = "blob";
+        xhr.open("GET", url, true);
+        xhr.responseType = "arraybuffer";
         xhr.onload = () => {
             if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
-                blobToDataUrl(xhr.response).then(resolve).catch(reject);
+                resolve(xhr.response);
             } else {
-                reject(new Error("Не удалось прочитать файл: " + path));
+                reject(new Error("HTTP " + xhr.status));
             }
         };
-        xhr.onerror = () => reject(new Error("Ошибка чтения файла: " + path));
+        xhr.onerror = () => reject(new Error("Ошибка загрузки"));
         xhr.send();
     });
 }
 
-async function loadRemoteGif(url) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    return blobToDataUrl(await response.blob());
+async function loadPluginStaticBuffer(relativePath) {
+    const url = new URL(relativePath, new URL("../", window.location.href)).href;
+    return loadArrayBufferFromUrl(url);
 }
 
-async function resolveGifData(settings) {
-    if (settings.gifData) return settings.gifData;
-    if (settings.gifUrl) return loadRemoteGif(settings.gifUrl);
-    if (settings.gifPath) return loadLocalFile(settings.gifPath);
-    if (settings.demoGif) return loadPluginStatic(settings.demoGif);
-    return loadPluginStatic("static/demo.gif");
+async function resolveGifBuffer(settings) {
+    if (settings.gifData) {
+        return loadArrayBufferFromUrl(settings.gifData);
+    }
+    if (settings.gifUrl) {
+        return loadArrayBufferFromUrl(settings.gifUrl);
+    }
+    if (settings.gifPath) {
+        return loadArrayBufferFromUrl(toFileUrl(settings.gifPath));
+    }
+    if (settings.demoGif) {
+        return loadPluginStaticBuffer(settings.demoGif);
+    }
+    return loadPluginStaticBuffer("static/demo.gif");
 }
 
 function stopGifPlayer(context) {
     const player = gifPlayers[context];
     if (!player) return;
     if (player.timerId) plugin.clearInterval(player.timerId);
-    player.img.src = "";
     delete gifPlayers[context];
-}
-
-function drawFit(ctx, img, size) {
-    const w = img.naturalWidth || size;
-    const h = img.naturalHeight || size;
-    const scale = Math.min(size / w, size / h);
-    const dw = w * scale;
-    const dh = h * scale;
-    ctx.clearRect(0, 0, size, size);
-    ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 }
 
 function logGif(context, message) {
@@ -85,12 +63,62 @@ function logGif(context, message) {
     }));
 }
 
+function loadBackgroundImage() {
+    if (bgImageCache) return Promise.resolve(bgImageCache);
+    const url = new URL("../static/default.jpg", window.location.href).href;
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            bgImageCache = img;
+            resolve(img);
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+function buildFrameSnapshots(gr) {
+    const width = gr.width;
+    const height = gr.height;
+    const numFrames = gr.numFrames();
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    const snapshots = [];
+
+    for (let i = 0; i < numFrames; i++) {
+        const info = gr.frameInfo(i);
+        if (i === 0 || info.disposal === 2) {
+            pixels.fill(0);
+        }
+        gr.decodeAndBlitFrameRGBA(i, pixels);
+        snapshots.push(new Uint8ClampedArray(pixels));
+    }
+
+    return { width, height, snapshots };
+}
+
+function drawFitImage(ctx, img, size) {
+    const w = img.width || img.naturalWidth || size;
+    const h = img.height || img.naturalHeight || size;
+    const scale = Math.min(size / w, size / h);
+    const dw = w * scale;
+    const dh = h * scale;
+    ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+}
+
+function snapshotToCanvas(snapshot, width, height) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").putImageData(new ImageData(snapshot, width, height), 0, 0);
+    return canvas;
+}
+
 async function applyGifToButton(context, settings, pluginRef) {
     stopGifPlayer(context);
 
-    let dataUrl;
+    let buffer;
     try {
-        dataUrl = await resolveGifData(settings);
+        buffer = await resolveGifBuffer(settings);
     } catch (err) {
         console.error("[gifbutton]", err);
         logGif(context, "GIF load error: " + err.message);
@@ -98,52 +126,83 @@ async function applyGifToButton(context, settings, pluginRef) {
         return;
     }
 
-    if (!dataUrl) {
+    if (!buffer || !buffer.byteLength) {
         window.socket.setTitle(context, "GIF");
         return;
     }
 
+    let gr;
+    try {
+        gr = new GifReader(new Uint8Array(buffer));
+    } catch (err) {
+        console.error("[gifbutton]", err);
+        logGif(context, "GIF parse error: " + err.message);
+        window.socket.setTitle(context, "GIF?");
+        return;
+    }
+
     const fps = Math.min(30, Math.max(1, Number(settings.fps) || 15));
-    const isGif = dataUrl.startsWith("data:image/gif")
-        || /\.gif(\?|$)/i.test(settings.gifUrl || settings.gifPath || settings.demoGif || "");
+    const bgOpacity = Math.min(1, Math.max(0, (Number(settings.bgOpacity ?? 50)) / 100));
+    const frameDelay = Math.round(1000 / fps);
 
-    if (settings.title) {
-        window.socket.setTitle(context, settings.title);
-    } else {
-        window.socket.setTitle(context, "");
+    window.socket.setTitle(context, settings.title || "");
+
+    let bgImage = null;
+    if (bgOpacity > 0) {
+        try {
+            bgImage = await loadBackgroundImage();
+        } catch {
+            bgImage = null;
+        }
     }
 
-    if (isGif) {
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = () => reject(new Error("Не удалось декодировать GIF"));
-        });
-
-        window.socket.setImage(context, dataUrl, true, 0);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = D6_KEY_SIZE;
-        canvas.height = D6_KEY_SIZE;
-        const ctx = canvas.getContext("2d");
-
-        const pushFrame = () => {
-            drawFit(ctx, img, D6_KEY_SIZE);
-            window.socket.setImageData(context, canvas.toDataURL("image/jpeg", 0.92), 1);
-        };
-
-        pushFrame();
-
-        const timerId = `gif-${context}`;
-        pluginRef.setInterval(timerId, pushFrame, Math.round(1000 / fps));
-        gifPlayers[context] = { img, timerId };
-    } else {
-        window.socket.setImage(context, dataUrl, false, 0);
+    const { width, height, snapshots } = buildFrameSnapshots(gr);
+    if (!snapshots.length) {
+        window.socket.setTitle(context, "GIF?");
+        return;
     }
+
+    const frameCanvas = snapshotToCanvas(snapshots[0], width, height);
+    const outCanvas = document.createElement("canvas");
+    outCanvas.width = D6_KEY_SIZE;
+    outCanvas.height = D6_KEY_SIZE;
+    const outCtx = outCanvas.getContext("2d");
+
+    let frameIndex = 0;
+
+    const pushFrame = () => {
+        const snapshot = snapshots[frameIndex];
+        frameCanvas.getContext("2d").putImageData(new ImageData(snapshot, width, height), 0, 0);
+
+        outCtx.clearRect(0, 0, D6_KEY_SIZE, D6_KEY_SIZE);
+
+        if (bgImage && bgOpacity > 0) {
+            outCtx.globalAlpha = bgOpacity;
+            drawFitImage(outCtx, bgImage, D6_KEY_SIZE);
+            outCtx.globalAlpha = 1;
+        }
+
+        drawFitImage(outCtx, frameCanvas, D6_KEY_SIZE);
+        window.socket.setImageData(context, outCanvas.toDataURL("image/jpeg", 0.92), 0);
+
+        frameIndex = (frameIndex + 1) % snapshots.length;
+    };
+
+    pushFrame();
+
+    const timerId = `gif-${context}`;
+    pluginRef.setInterval(timerId, pushFrame, frameDelay);
+    gifPlayers[context] = { timerId, frames: snapshots.length };
+
+    logGif(context, `Анимация: ${snapshots.length} кадр(ов), ${fps} FPS`);
 
     const userSource = settings.gifData || settings.gifUrl || settings.gifPath;
-    if (userSource && !settings.gifData && dataUrl.length < 1_500_000) {
-        window.socket.setSettings(context, { ...settings, gifData: dataUrl });
+    if (userSource && !settings.gifData && buffer.byteLength < 1_500_000) {
+        const blob = new Blob([buffer], { type: "image/gif" });
+        const reader = new FileReader();
+        reader.onload = () => {
+            window.socket.setSettings(context, { ...settings, gifData: reader.result });
+        };
+        reader.readAsDataURL(blob);
     }
 }

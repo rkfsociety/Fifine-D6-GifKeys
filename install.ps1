@@ -1,4 +1,8 @@
-# Installs plugin and restarts fifine Control Deck
+# Installs Fifine D6 Starter plugin
+# Usage: .\install.ps1           - copy only
+#        .\install.ps1 -Restart  - copy and restart fifine Control Deck
+
+param([switch]$Restart)
 
 $ErrorActionPreference = "Stop"
 
@@ -24,20 +28,20 @@ if (Test-Path $Target) {
 Write-Host "Copying $PluginName -> $Target"
 Copy-Item -Recurse -Force $Source $Target
 
-$procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*fifine Control Deck*" }
-if ($procs) {
-    Write-Host "Restarting fifine Control Deck..."
-    $procs | Stop-Process -Force
-    Start-Sleep -Seconds 2
-}
-
-if (Test-Path $FifineExe) {
-    Start-Process -FilePath $FifineExe
-    Write-Host "fifine Control Deck started."
+if ($Restart) {
+    $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*fifine Control Deck*" }
+    if ($procs) {
+        Write-Host "Restarting fifine Control Deck..."
+        $procs | Stop-Process -Force
+        Start-Sleep -Seconds 2
+    }
+    if (Test-Path $FifineExe) {
+        Start-Process -FilePath $FifineExe -ArgumentList "--RunInBackground"
+        Write-Host "fifine Control Deck started."
+    }
 } else {
-    Write-Host "Start fifine Control Deck manually."
+    Write-Host "Restart fifine Control Deck manually to load the update (or use -Restart)."
 }
 
 Write-Host ""
-Write-Host "Done. Category in library: Fifine D6 Starter"
-Write-Host "Drag 'GIF Button' onto a key."
+Write-Host "Done. Category: Fifine D6 Starter"
