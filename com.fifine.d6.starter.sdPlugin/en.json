@@ -1,6 +1,6 @@
 {
   "Name": "Fifine D6 Starter",
-  "Description": "Starter plugin for Fifine D6: counter and open URL actions",
+  "Description": "Plugin for Fifine D6: GIF buttons, counter, open URL",
   "com.fifine.d6.starter.counter": {
     "Name": "Counter",
     "Tooltip": "Increments a number on each key press"
@@ -8,6 +8,10 @@
   "com.fifine.d6.starter.openurl": {
     "Name": "Open URL",
     "Tooltip": "Opens the configured URL in your browser"
+  },
+  "com.fifine.d6.starter.gifbutton": {
+    "Name": "GIF Button",
+    "Tooltip": "Shows an animated GIF on the D6 key"
   },
   "Category": "Fifine D6 Starter",
   "Localization": {}

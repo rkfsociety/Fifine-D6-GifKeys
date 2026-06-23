@@ -1,90 +1,71 @@
-# Fifine D6 — стартовый плагин
+# Fifine D6 — плагин с GIF на кнопках
 
-Плагин для **FIFINE AmpliGame D6** (и совместимого ПО StreamDock / fifine Control Deck). Два готовых действия для изучения SDK и дальнейшей разработки.
+Плагин для **FIFINE AmpliGame D6** (и совместимого ПО StreamDock / fifine Control Deck).
 
 ## Что внутри
 
 | Действие | Описание |
 |----------|----------|
-| **Счётчик** | При нажатии увеличивает число на кнопке. Шаг и сброс настраиваются в панели свойств. |
-| **Открыть URL** | Открывает заданный адрес в браузере по нажатию кнопки. |
+| **GIF-кнопка** | Показывает анимированный GIF на клавише панели. Файл с диска или ссылка. |
+| **Счётчик** | При нажатии увеличивает число на кнопке. Шаг и сброс в настройках. |
+| **Открыть URL** | Открывает заданный адрес в браузере. |
+
+## GIF-кнопка — как пользоваться
+
+1. Перетащите действие **GIF-кнопка** на нужную клавишу D6.
+2. В панели справа:
+   - нажмите **Файл GIF** и выберите `.gif` на диске, **или**
+   - вставьте прямую ссылку на GIF (должна открываться в браузере).
+3. Настройте **FPS** (1–30) — скорость анимации на физической кнопке.
+4. При необходимости добавьте **Подпись** поверх GIF.
+
+### Как это работает
+
+- В **интерфейсе ПО** GIF передаётся целиком (`data:image/gif;base64`) — анимация нативная.
+- На **физической кнопке D6** (126×126) плагин снимает кадры с GIF и отправляет их на устройство — так работает железо Mirabox/Fifine.
+
+Рекомендуемый размер GIF: **до 1–2 МБ**, разрешение около **126×126** или **72×72** для плавности.
 
 ## Требования
 
-- Windows 10/11 (или macOS — плагин кроссплатформенный)
-- Установленное ПО **fifine Control Deck** / **FIFINE D6**
+- Windows 10/11 (или macOS)
+- **fifine Control Deck** / **FIFINE D6**
 - Подключённый контроллер D6
 
 ## Установка
-
-### Вариант 1 — скрипт (Windows)
 
 ```powershell
 .\install.ps1
 ```
 
-Скрипт копирует папку `com.fifine.d6.starter.sdPlugin` в каталог плагинов и предлагает перезапустить ПО.
+Или вручную скопируйте `com.fifine.d6.starter.sdPlugin` в:
 
-### Вариант 2 — вручную
+```
+%APPDATA%\HotSpot\StreamDock\plugins\
+```
 
-1. Скопируйте папку `com.fifine.d6.starter.sdPlugin` в:
+Перезапустите **fifine Control Deck**. Категория в библиотеке: **Fifine D6 Starter**.
 
-   ```
-   %APPDATA%\HotSpot\StreamDock\plugins\
-   ```
-
-   На вашем ПК это обычно:
-
-   `C:\Users\<имя>\AppData\Roaming\HotSpot\StreamDock\plugins\`
-
-2. Перезапустите **fifine Control Deck**.
-
-3. В библиотеке действий найдите категорию **Fifine D6 Starter** и перетащите действие на кнопку.
-
-## Разработка
-
-Плагин основан на [StreamDock Plugin SDK](https://github.com/MiraboxSpace/StreamDock-Plugin-SDK) (JavaScript-шаблон). SDK клонируется в `F:\github\PROG\StreamDock-Plugin-SDK`.
-
-### Структура
+## Структура проекта
 
 ```
 com.fifine.d6.starter.sdPlugin/
-├── manifest.json          # метаданные и список действий
-├── en.json / ru.json      # локализация
+├── manifest.json
 ├── plugin/
-│   ├── index.html         # точка входа (фоновый процесс плагина)
 │   ├── index.js           # логика действий
-│   └── utils/             # WebSocket, таймеры
-├── propertyInspector/       # панели настроек для каждого действия
+│   ├── gif.js             # загрузка и анимация GIF
+│   └── utils/
+├── propertyInspector/
+│   ├── gifbutton/         # выбор файла / URL, превью
 │   ├── counter/
 │   └── openurl/
-└── static/                # иконки и стили
+└── static/
 ```
 
-### Как добавить новое действие
-
-1. Добавьте запись в `manifest.json` → `Actions` (уникальный `UUID`, например `com.fifine.d6.starter.myaction`).
-2. Создайте обработчик в `plugin/index.js` — имя свойства должно совпадать с последней частью UUID (`myaction`).
-3. Добавьте папку `propertyInspector/myaction/` с `index.html` и `index.js`.
-4. Обновите `ru.json` и `en.json`.
-5. Запустите `.\install.ps1` и перезапустите ПО.
-
-### События и API
-
-- Документация SDK: [sdk.key123.vip](https://sdk.key123.vip/en/)
-- События: `willAppear`, `keyUp`, `didReceiveSettings`
-- Отправка: `setTitle`, `setSettings`, `openUrl`, `setImage`, `setState`
-
-### Node.js для сложной логики
-
-Если нужны системные вызовы (запуск программ, работа с файлами), используйте шаблон **SDNodeJsSDK** из того же репозитория SDK — он запускает Node.js внутри хоста.
-
-## Публикация
-
-Готовый плагин можно опубликовать в [Space Platform](https://space.key123.vip/) (магазин плагинов StreamDock / Mirabox).
+SDK: `F:\github\PROG\StreamDock-Plugin-SDK` · Документация: [sdk.key123.vip](https://sdk.key123.vip/en/)
 
 ## Ссылки
 
 - [Скачать ПО Fifine D6](https://fifinemicrophone.com/pages/download-fifine-d6-software)
+- [Репозиторий](https://github.com/rkfsociety/Fifine-D6-3555)
 - [StreamDock Plugin SDK](https://github.com/MiraboxSpace/StreamDock-Plugin-SDK)
-- [Документация SDK](https://sdk.key123.vip/en/)

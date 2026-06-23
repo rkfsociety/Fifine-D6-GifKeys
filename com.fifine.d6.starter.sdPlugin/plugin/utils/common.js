@@ -89,8 +89,15 @@ window.connectElgatoStreamDeckSocket = function () {
         }));
     };
 
-    // 设置背景
-    WebSocket.prototype.setImage = function (context, url) {
+    // 设置背景 (isGif=true 时直接发送 GIF/SVG，不经过 canvas)
+    WebSocket.prototype.setImage = function (context, url, isGif = false, target = 0) {
+        if (isGif) {
+            this.send(JSON.stringify({
+                event: "setImage",
+                context, payload: { target, image: url }
+            }));
+            return;
+        }
         const image = new Image();
         image.src = url;
         image.onload = () => {
@@ -102,11 +109,19 @@ window.connectElgatoStreamDeckSocket = function () {
             this.send(JSON.stringify({
                 event: "setImage",
                 context, payload: {
-                    target: 0,
+                    target,
                     image: canvas.toDataURL("image/png")
                 }
             }));
         };
+    };
+
+    // 直接发送已编码的图片数据 (用于 GIF 动画帧)
+    WebSocket.prototype.setImageData = function (context, imageData, target = 1) {
+        this.send(JSON.stringify({
+            event: "setImage",
+            context, payload: { target, image: imageData }
+        }));
     };
 
     // 设置标题

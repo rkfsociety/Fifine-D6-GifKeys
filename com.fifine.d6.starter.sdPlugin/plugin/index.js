@@ -46,3 +46,27 @@ plugin.openurl = new Actions({
         window.socket.setTitle(context, formatUrlTitle(settings.url));
     }
 });
+
+plugin.gifbutton = new Actions({
+    default: {
+        gifPath: "",
+        gifUrl: "",
+        gifData: "",
+        title: "",
+        showTitle: false,
+        fps: 15
+    },
+    _willAppear(data) {
+        applyGifToButton(data.context, data.payload.settings, plugin);
+    },
+    _willDisappear({ context }) {
+        stopGifPlayer(context);
+    },
+    didReceiveSettings({ context, payload: { settings } }) {
+        applyGifToButton(context, settings, plugin);
+    },
+    sendToPlugin(data) {
+        const settings = data.payload?.settings || this.data[data.context];
+        if (settings) applyGifToButton(data.context, settings, plugin);
+    }
+});
