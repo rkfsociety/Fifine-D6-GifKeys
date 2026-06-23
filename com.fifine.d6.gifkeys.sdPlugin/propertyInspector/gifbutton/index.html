@@ -38,6 +38,22 @@
         </div>
 
         <div class="sdpi-item">
+            <div class="sdpi-item-label">Скорость (%)</div>
+            <div class="sdpi-item-value" style="display:flex;align-items:center;gap:8px;">
+                <input id="speed" class="sdpi-item-value" type="range" min="25" max="400" value="100" style="flex:1;">
+                <span id="speedValue" style="min-width:42px;text-align:right;">100%</span>
+            </div>
+        </div>
+
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Тайминг</div>
+            <select id="timingMode" class="sdpi-item-value">
+                <option value="fps">Фиксированный FPS</option>
+                <option value="gif">Как в GIF-файле</option>
+            </select>
+        </div>
+
+        <div class="sdpi-item" id="fpsRow">
             <div class="sdpi-item-label">FPS (1–30)</div>
             <input id="fps" class="sdpi-item-value" type="number" min="1" max="30" value="15">
         </div>

@@ -52,7 +52,9 @@ async function resolveGifBuffer(settings) {
 function stopGifPlayer(context) {
     const player = gifPlayers[context];
     if (!player) return;
-    if (player.timerId) plugin.clearInterval(player.timerId);
+    const id = player.timerId;
+    plugin.clearInterval(id);
+    plugin.clearTimeout(id);
     delete gifPlayers[context];
 }
 
@@ -61,6 +63,24 @@ function logGif(context, message) {
         event: "logMessage",
         payload: { message: "[D6 GIF Keys] " + message + " (" + context + ")" }
     }));
+}
+
+function speedMultiplier(settings) {
+    const percent = Number(settings.speed ?? 100);
+    return Math.min(4, Math.max(0.25, (Number.isFinite(percent) ? percent : 100) / 100));
+}
+
+function frameDelayMs(frameIndex, gr, settings) {
+    const speed = speedMultiplier(settings);
+    const useGifTiming = settings.timingMode === "gif";
+
+    if (useGifTiming) {
+        const centiseconds = gr.frameInfo(frameIndex).delay || 10;
+        return Math.max(20, Math.round((centiseconds * 10) / speed));
+    }
+
+    const fps = Math.min(30, Math.max(1, Number(settings.fps) || 15));
+    return Math.max(20, Math.round(1000 / (fps * speed)));
 }
 
 function loadBackgroundImage() {
@@ -141,9 +161,10 @@ async function applyGifToButton(context, settings, pluginRef) {
         return;
     }
 
-    const fps = Math.min(30, Math.max(1, Number(settings.fps) || 15));
     const bgOpacity = Math.min(1, Math.max(0, (Number(settings.bgOpacity ?? 50)) / 100));
-    const frameDelay = Math.round(1000 / fps);
+    const speed = speedMultiplier(settings);
+    const useGifTiming = settings.timingMode === "gif";
+    const fps = Math.min(30, Math.max(1, Number(settings.fps) || 15));
 
     window.socket.setTitle(context, settings.title || "");
 
@@ -170,8 +191,8 @@ async function applyGifToButton(context, settings, pluginRef) {
 
     let frameIndex = 0;
 
-    const pushFrame = () => {
-        const snapshot = snapshots[frameIndex];
+    const renderFrame = (index) => {
+        const snapshot = snapshots[index];
         frameCanvas.getContext("2d").putImageData(new ImageData(snapshot, width, height), 0, 0);
 
         outCtx.clearRect(0, 0, D6_KEY_SIZE, D6_KEY_SIZE);
@@ -184,17 +205,23 @@ async function applyGifToButton(context, settings, pluginRef) {
 
         drawFitImage(outCtx, frameCanvas, D6_KEY_SIZE);
         window.socket.setImageData(context, outCanvas.toDataURL("image/jpeg", 0.92), 0);
-
-        frameIndex = (frameIndex + 1) % snapshots.length;
     };
 
-    pushFrame();
-
     const timerId = `gif-${context}`;
-    pluginRef.setInterval(timerId, pushFrame, frameDelay);
+
+    const tick = () => {
+        renderFrame(frameIndex);
+        const delay = frameDelayMs(frameIndex, gr, settings);
+        frameIndex = (frameIndex + 1) % snapshots.length;
+        pluginRef.setTimeout(timerId, tick, delay);
+    };
+
+    tick();
     gifPlayers[context] = { timerId, frames: snapshots.length };
 
-    logGif(context, `Анимация: ${snapshots.length} кадр(ов), ${fps} FPS`);
+    const speedLabel = Math.round(speed * 100) + "%";
+    const timingLabel = useGifTiming ? "тайминг GIF" : fps + " FPS";
+    logGif(context, `Анимация: ${snapshots.length} кадр(ов), ${timingLabel}, скорость ${speedLabel}`);
 
     const userSource = settings.gifData || settings.gifUrl || settings.gifPath;
     if (userSource && !settings.gifData && buffer.byteLength < 1_500_000) {

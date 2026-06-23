@@ -53,11 +53,28 @@ function updatePreview() {
     }
 }
 
+function pushSettingsToPlugin() {
+    $websocket.sendToPlugin({ settings: JSON.parse(JSON.stringify($settings)) });
+}
+
+function updateSpeedLabel() {
+    $("#speedValue").textContent = ($settings.speed ?? 100) + "%";
+}
+
+function updateTimingUi() {
+    const useGif = $settings.timingMode === "gif";
+    $("#fpsRow").style.display = useGif ? "none" : "";
+}
+
 function syncFields() {
     $("#gifUrl").value = $settings.gifUrl || "";
+    $("#speed").value = $settings.speed ?? 100;
+    $("#timingMode").value = $settings.timingMode === "gif" ? "gif" : "fps";
     $("#fps").value = $settings.fps ?? 15;
     $("#bgOpacity").value = $settings.bgOpacity ?? 50;
     $("#title").value = $settings.title || "";
+    updateSpeedLabel();
+    updateTimingUi();
     updatePreview();
 }
 
@@ -95,16 +112,31 @@ $("#gifUrl").on("change", () => {
     updatePreview();
 });
 
-$("#fps").on("change", () => {
-    $settings.fps = Math.min(30, Math.max(1, Number($("#fps").value) || 15));
+$("#speed").on("input", () => {
+    $settings.speed = Math.min(400, Math.max(25, Number($("#speed").value) || 100));
+    updateSpeedLabel();
+    pushSettingsToPlugin();
 });
 
-$("#bgOpacity").on("change", () => {
+$("#timingMode").on("change", () => {
+    $settings.timingMode = $("#timingMode").value === "gif" ? "gif" : "fps";
+    updateTimingUi();
+    pushSettingsToPlugin();
+});
+
+$("#fps").on("change", () => {
+    $settings.fps = Math.min(30, Math.max(1, Number($("#fps").value) || 15));
+    pushSettingsToPlugin();
+});
+
+$("#bgOpacity").on("input", () => {
     $settings.bgOpacity = Math.min(100, Math.max(0, Number($("#bgOpacity").value) || 50));
+    pushSettingsToPlugin();
 });
 
 $("#title").on("change", () => {
     $settings.title = $("#title").value.trim();
+    pushSettingsToPlugin();
 });
 
 $("#clear").on("click", () => {

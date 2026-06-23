@@ -16,6 +16,8 @@
         "gifUrl": "",
         "gifData": "",
         "fps": 15,
+        "speed": 100,
+        "timingMode": "fps",
         "bgOpacity": 50
       },
       "Controllers": [
@@ -78,7 +80,7 @@
   "Description": "Animated GIF keys, counter and open URL for Fifine D6",
   "Category": "D6 GIF Keys",
   "CategoryIcon": "static/CH.png",
-  "Version": "1.4.0",
+  "Version": "1.5.0",
   "URL": "https://github.com/rkfsociety/Fifine-D6-GifKeys",
   "OS": [
     {

@@ -55,6 +55,8 @@ plugin.gifbutton = new Actions({
         gifData: "",
         title: "",
         fps: 15,
+        speed: 100,
+        timingMode: "fps",
         bgOpacity: 50
     },
     _willAppear(data) {
