@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Счётчик — настройки</title>
+    <link rel="stylesheet" href="../../static/css/sdpi.css">
+</head>
+
+<body>
+    <div class="sdpi-wrapper" style="display: none">
+        <div class="sdpi-heading">Счётчик</div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Шаг</div>
+            <input id="step" class="sdpi-item-value" type="number" min="1" max="999" value="1">
+        </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Текущее значение</div>
+            <input id="count" class="sdpi-item-value" type="number" min="0" value="0">
+        </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Сброс</div>
+            <button id="reset" class="sdpi-item-value">Обнулить</button>
+        </div>
+    </div>
+    <script src="../utils/common.js"></script>
+    <script src="../utils/action.js"></script>
+    <script src="index.js"></script>
+</body>
+
+</html>

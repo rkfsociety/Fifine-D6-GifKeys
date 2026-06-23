@@ -1,0 +1,10 @@
+# SDK reference (local clone, not part of plugin package)
+# F:\github\PROG\StreamDock-Plugin-SDK
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
