@@ -2,7 +2,34 @@
   "Actions": [
     {
       "Icon": "static/CH.png",
-      "Name": "Счётчик",
+      "Name": "GIF Button",
+      "States": [
+        {
+          "FontSize": "10",
+          "TitleAlignment": "bottom",
+          "Image": "static/demo.gif"
+        }
+      ],
+      "Settings": {
+        "demoGif": "static/demo.gif",
+        "gifPath": "",
+        "gifUrl": "",
+        "gifData": "",
+        "fps": 15
+      },
+      "Controllers": [
+        "Keypad",
+        "Information"
+      ],
+      "UserTitleEnabled": true,
+      "SupportedInMultiActions": false,
+      "Tooltip": "Animated GIF on D6 key",
+      "UUID": "com.fifine.d6.starter.gifbutton",
+      "PropertyInspectorPath": "propertyInspector/gifbutton/index.html"
+    },
+    {
+      "Icon": "static/CH.png",
+      "Name": "Counter",
       "States": [
         {
           "FontSize": "16",
@@ -16,13 +43,13 @@
       ],
       "UserTitleEnabled": true,
       "SupportedInMultiActions": false,
-      "Tooltip": "Увеличивает число на кнопке при каждом нажатии",
+      "Tooltip": "Increment number on each press",
       "UUID": "com.fifine.d6.starter.counter",
       "PropertyInspectorPath": "propertyInspector/counter/index.html"
     },
     {
       "Icon": "static/CH.png",
-      "Name": "Открыть URL",
+      "Name": "Open URL",
       "States": [
         {
           "FontSize": "10",
@@ -36,41 +63,22 @@
       ],
       "UserTitleEnabled": true,
       "SupportedInMultiActions": false,
-      "Tooltip": "Открывает указанный адрес в браузере",
+      "Tooltip": "Open URL in browser",
       "UUID": "com.fifine.d6.starter.openurl",
       "PropertyInspectorPath": "propertyInspector/openurl/index.html"
-    },
-    {
-      "Icon": "static/default.jpg",
-      "Name": "GIF-кнопка",
-      "States": [
-        {
-          "FontSize": "10",
-          "TitleAlignment": "bottom",
-          "Image": "static/default.jpg"
-        }
-      ],
-      "Controllers": [
-        "Keypad",
-        "Information"
-      ],
-      "UserTitleEnabled": true,
-      "SupportedInMultiActions": false,
-      "Tooltip": "Показывает анимированный GIF на кнопке D6",
-      "UUID": "com.fifine.d6.starter.gifbutton",
-      "PropertyInspectorPath": "propertyInspector/gifbutton/index.html"
     }
   ],
+  "PUUID": "FifineD6Starter",
   "SDKVersion": 1,
   "Author": "roman",
   "Name": "Fifine D6 Starter",
   "Icon": "static/CH.png",
   "CodePath": "plugin/index.html",
-  "Description": "Плагин для Fifine D6: GIF на кнопках, счётчик, открытие ссылок",
+  "Description": "GIF buttons, counter and open URL for Fifine D6",
   "Category": "Fifine D6 Starter",
   "CategoryIcon": "static/CH.png",
-  "Version": "1.1.0",
-  "URL": "https://github.com/",
+  "Version": "1.2.0",
+  "URL": "https://github.com/rkfsociety/Fifine-D6-3555",
   "OS": [
     {
       "Platform": "mac",

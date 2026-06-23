@@ -49,11 +49,11 @@ plugin.openurl = new Actions({
 
 plugin.gifbutton = new Actions({
     default: {
+        demoGif: "static/demo.gif",
         gifPath: "",
         gifUrl: "",
         gifData: "",
         title: "",
-        showTitle: false,
         fps: 15
     },
     _willAppear(data) {

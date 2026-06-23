@@ -19,6 +19,16 @@ function blobToDataUrl(blob) {
     });
 }
 
+function loadPluginStatic(relativePath) {
+    const url = new URL(relativePath, new URL("../", window.location.href)).href;
+    return fetch(url)
+        .then((response) => {
+            if (!response.ok) throw new Error("static fetch failed: " + relativePath);
+            return response.blob();
+        })
+        .then(blobToDataUrl);
+}
+
 function loadLocalFile(path) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -46,7 +56,8 @@ async function resolveGifData(settings) {
     if (settings.gifData) return settings.gifData;
     if (settings.gifUrl) return loadRemoteGif(settings.gifUrl);
     if (settings.gifPath) return loadLocalFile(settings.gifPath);
-    return null;
+    if (settings.demoGif) return loadPluginStatic(settings.demoGif);
+    return loadPluginStatic("static/demo.gif");
 }
 
 function stopGifPlayer(context) {
@@ -67,6 +78,13 @@ function drawFit(ctx, img, size) {
     ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
 }
 
+function logGif(context, message) {
+    window.socket?.send(JSON.stringify({
+        event: "logMessage",
+        payload: { message: "[Fifine D6 Starter] " + message + " (" + context + ")" }
+    }));
+}
+
 async function applyGifToButton(context, settings, pluginRef) {
     stopGifPlayer(context);
 
@@ -75,6 +93,7 @@ async function applyGifToButton(context, settings, pluginRef) {
         dataUrl = await resolveGifData(settings);
     } catch (err) {
         console.error("[gifbutton]", err);
+        logGif(context, "GIF load error: " + err.message);
         window.socket.setTitle(context, "GIF?");
         return;
     }
@@ -85,11 +104,12 @@ async function applyGifToButton(context, settings, pluginRef) {
     }
 
     const fps = Math.min(30, Math.max(1, Number(settings.fps) || 15));
-    const isGif = dataUrl.startsWith("data:image/gif") || /\.gif(\?|$)/i.test(settings.gifUrl || settings.gifPath || "");
+    const isGif = dataUrl.startsWith("data:image/gif")
+        || /\.gif(\?|$)/i.test(settings.gifUrl || settings.gifPath || settings.demoGif || "");
 
     if (settings.title) {
         window.socket.setTitle(context, settings.title);
-    } else if (settings.showTitle !== true) {
+    } else {
         window.socket.setTitle(context, "");
     }
 
@@ -101,26 +121,29 @@ async function applyGifToButton(context, settings, pluginRef) {
             img.onerror = () => reject(new Error("Не удалось декодировать GIF"));
         });
 
-        // GIF в интерфейсе ПО (анимация нативно)
-        window.socket.setImage(context, dataUrl, true, 2);
+        window.socket.setImage(context, dataUrl, true, 0);
 
         const canvas = document.createElement("canvas");
         canvas.width = D6_KEY_SIZE;
         canvas.height = D6_KEY_SIZE;
         const ctx = canvas.getContext("2d");
 
-        const timerId = `gif-${context}`;
-        pluginRef.setInterval(timerId, () => {
+        const pushFrame = () => {
             drawFit(ctx, img, D6_KEY_SIZE);
             window.socket.setImageData(context, canvas.toDataURL("image/jpeg", 0.92), 1);
-        }, Math.round(1000 / fps));
+        };
 
+        pushFrame();
+
+        const timerId = `gif-${context}`;
+        pluginRef.setInterval(timerId, pushFrame, Math.round(1000 / fps));
         gifPlayers[context] = { img, timerId };
     } else {
-        window.socket.setImage(context, dataUrl);
+        window.socket.setImage(context, dataUrl, false, 0);
     }
 
-    if (!settings.gifData && dataUrl.length < 1_500_000) {
+    const userSource = settings.gifData || settings.gifUrl || settings.gifPath;
+    if (userSource && !settings.gifData && dataUrl.length < 1_500_000) {
         window.socket.setSettings(context, { ...settings, gifData: dataUrl });
     }
 }

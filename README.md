@@ -35,10 +35,11 @@
 ## Установка
 
 ```powershell
+cd "F:\github\Fifine D6_3555"
 .\install.ps1
 ```
 
-Или вручную скопируйте `com.fifine.d6.starter.sdPlugin` в:
+Скрипт копирует плагин в `%APPDATA%\HotSpot\StreamDock\plugins\` и **перезапускает** fifine Control Deck (без перезапуска новые плагины не подхватываются).
 
 ```
 %APPDATA%\HotSpot\StreamDock\plugins\
